@@ -22,12 +22,19 @@ export default function UploadComponent() {
             method: "POST",
             body: formData
         })
-        if (!res.ok) throw new Error("Upload failed")
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}))
+            throw new Error(errorData.error || "Upload failed")
+        }
         toast.success("PDF processed and saved!")
         router.refresh()
         setFile(null)
-    } catch (e) {
-        toast.error("Error uploading file")
+        // Reset the input value
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+    } catch (e: any) {
+        console.error(e)
+        toast.error(e.message || "Error uploading file")
     } finally {
         setLoading(false)
     }

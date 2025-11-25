@@ -4,7 +4,6 @@ import { pdfHistory } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq, and } from "drizzle-orm";
-import { extractText } from "unpdf";
 
 export async function POST(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -31,12 +30,15 @@ export async function POST(req: NextRequest) {
   }
 
   const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
 
   try {
     console.log("Parsing PDF...");
     
-    // Use unpdf - designed for serverless environments
-    const { text } = await extractText(arrayBuffer, { mergePages: true });
+    // Dynamic import to avoid build-time issues
+    const pdfParse = (await import("pdf-parse")).default;
+    const data = await pdfParse(buffer);
+    const text = data.text;
     
     console.log("PDF parsed successfully. Text length:", text.length);
     

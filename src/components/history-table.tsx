@@ -82,7 +82,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
                                         <span className="max-w-[200px] truncate">{item.fileName}</span>
                                     </div>
                                 </TableCell>
-                                <TableCell>{new Date(item.uploadedAt).toLocaleDateString()}</TableCell>
+                                <TableCell>{new Date(item.uploadedAt).toLocaleDateString('en-US')}</TableCell>
                                 <TableCell className="max-w-[300px] truncate text-muted-foreground">
                                     {item.fileContent.substring(0, 50)}...
                                 </TableCell>
@@ -99,7 +99,7 @@ export function HistoryTable({ history }: HistoryTableProps) {
                                                 <DialogHeader className="flex-shrink-0">
                                                     <DialogTitle className="truncate pr-8">{item.fileName}</DialogTitle>
                                                     <DialogDescription>
-                                                        Uploaded on {new Date(item.uploadedAt).toLocaleString()}
+                                                        Uploaded on {new Date(item.uploadedAt).toLocaleString('en-US')}
                                                     </DialogDescription>
                                                 </DialogHeader>
                                                 <div className="flex-1 min-h-0 mt-4">

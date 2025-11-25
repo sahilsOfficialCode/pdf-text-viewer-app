@@ -4,6 +4,7 @@ import { pdfHistory } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq, and } from "drizzle-orm";
+import PDFParser from "pdf2json";
 
 export async function POST(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -16,6 +17,18 @@ export async function POST(req: NextRequest) {
 
   if (!file) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+  }
+
+  // Validate file type - only accept PDFs
+  const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  if (!isPdf) {
+    return NextResponse.json({ error: "Only PDF files are allowed" }, { status: 400 });
+  }
+
+  // Validate file size - max 10MB
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 });
   }
 
   console.log("File received:", file.name, "Size:", file.size, "Type:", file.type);
@@ -35,10 +48,21 @@ export async function POST(req: NextRequest) {
   try {
     console.log("Parsing PDF...");
     
-    // Dynamic import to avoid build-time issues
-    const pdfParse = (await import("pdf-parse")).default;
-    const data = await pdfParse(buffer);
-    const text = data.text;
+    // Use pdf2json - pure JavaScript, no DOM dependencies
+    const text = await new Promise<string>((resolve, reject) => {
+      const pdfParser = new PDFParser(null, true);
+      
+      pdfParser.on("pdfParser_dataError", (errData: any) => {
+        reject(new Error(errData.parserError));
+      });
+      
+      pdfParser.on("pdfParser_dataReady", () => {
+        const rawText = pdfParser.getRawTextContent();
+        resolve(rawText);
+      });
+      
+      pdfParser.parseBuffer(buffer);
+    });
     
     console.log("PDF parsed successfully. Text length:", text.length);
     

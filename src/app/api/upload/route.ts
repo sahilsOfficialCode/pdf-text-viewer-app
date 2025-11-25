@@ -4,6 +4,7 @@ import { pdfHistory } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createRequire } from "module";
+import { eq, and } from "drizzle-orm";
 
 export async function POST(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -32,6 +33,15 @@ export async function POST(req: NextRequest) {
 
   console.log("File received:", file.name, "Size:", file.size, "Type:", file.type);
 
+  // Check for duplicate file (same name for same user)
+  const existing = await db.select({ id: pdfHistory.id }).from(pdfHistory).where(
+    and(eq(pdfHistory.userId, session.user.id), eq(pdfHistory.fileName, file.name))
+  ).limit(1);
+
+  if (existing.length > 0) {
+    return NextResponse.json({ error: "A file with this name already exists. Please rename the file or delete the existing one." }, { status: 409 });
+  }
+
   const arrayBuffer = await file.arrayBuffer();
   // pdfjs-dist accepts ArrayBuffer directly or Uint8Array
   const uint8Array = new Uint8Array(arrayBuffer);
@@ -52,9 +62,29 @@ export async function POST(req: NextRequest) {
 
     for (let i = 1; i <= pdfDocument.numPages; i++) {
         const page = await pdfDocument.getPage(i);
+        const viewport = page.getViewport({ scale: 1.0 });
         const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(" ");
-        fullText += pageText + "\n";
+        
+        // Use content stream order which usually preserves logical reading order (e.g. columns)
+        const items = textContent.items as any[];
+
+        let lastY = -1;
+        let text = '';
+        
+        for (const item of items) {
+            const str = item.str;
+            // Add space if needed (simple heuristic)
+            if (text.length > 0 && !text.endsWith(' ') && !text.endsWith('\n')) {
+                text += ' ';
+            }
+            
+            text += str;
+            if (item.hasEOL) {
+                text += '\n';
+            }
+        }
+        
+        fullText += text + "\n\n";
     }
 
     console.log("PDF parsed successfully. Text length:", fullText.length);

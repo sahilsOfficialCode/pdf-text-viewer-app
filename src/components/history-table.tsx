@@ -17,8 +17,19 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { FileText, Eye, Trash2 } from "lucide-react"
+import { FileText, Eye, Trash2, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -40,8 +51,6 @@ export function HistoryTable({ history }: HistoryTableProps) {
     const router = useRouter()
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this PDF?")) return
-        
         setDeletingId(id)
         try {
             const res = await fetch(`/api/pdf?id=${id}`, { method: "DELETE" })
@@ -69,8 +78,10 @@ export function HistoryTable({ history }: HistoryTableProps) {
                 <TableBody>
                     {history.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">
-                                No history found
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>No PDFs uploaded yet</p>
+                                <p className="text-sm">Upload your first PDF to get started</p>
                             </TableCell>
                         </TableRow>
                     ) : (
@@ -111,15 +122,40 @@ export function HistoryTable({ history }: HistoryTableProps) {
                                                 </div>
                                             </DialogContent>
                                         </Dialog>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            onClick={() => handleDelete(item.id)}
-                                            disabled={deletingId === item.id}
-                                            className="text-destructive hover:text-destructive"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    disabled={deletingId === item.id}
+                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                >
+                                                    {deletingId === item.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Delete this PDF?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will permanently delete <span className="font-medium text-foreground">"{item.fileName}"</span> and its extracted text. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => handleDelete(item.id)}
+                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                    >
+                                                        Delete
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </div>
                                 </TableCell>
                             </TableRow>
